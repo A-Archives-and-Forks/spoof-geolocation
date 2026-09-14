@@ -67,6 +67,37 @@ const save = async (r, fix = false) => {
   }
 };
 
+// one ask per document/frame: the result (a reply string or undefined for
+// cancellation) is cached in the function properties below and reused for
+// all sub-requests. It is cleared when the content script re-injects on
+// refresh or navigation
+const ask = () => {
+  if (ask.resolved) {
+    return Promise.resolve(ask.value);
+  }
+  return new Promise(resolve => {
+    ask.resolved = false;
+    const done = value => {
+      if (ask.resolved === false) {
+        ask.resolved = true;
+        ask.value = value;
+        resolve(value);
+      }
+    };
+    chrome.runtime.sendMessage({method: 'open-prompt'}, () => {
+      if (chrome.runtime.lastError) {
+        return done(undefined);
+      }
+      const port = chrome.runtime.connect({name: 'geo-prompt'});
+      port.onMessage.addListener(msg => {
+        done(msg);
+        port.disconnect();
+      });
+      port.onDisconnect.addListener(() => done(undefined));
+    });
+  });
+};
+
 const respond = async () => {
   if (respond.busy) {
     return;
@@ -90,10 +121,7 @@ const respond = async () => {
 
   if (prefs.enabled) {
     if (!prefs.latitude || !prefs.longitude) {
-      const msg = `Enter your spoofed "latitude" and "longitude" values as well as a custom name for the location.
-
-Ensure at least 5 digits follow the decimal point.`;
-      let r = prompt(msg, '51.507368, -0.127695, My Location');
+      let r = await ask();
       let fix = false;
       if (r) {
         // what if the name includes comma?

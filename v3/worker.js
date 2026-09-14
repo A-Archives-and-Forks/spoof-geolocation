@@ -2,7 +2,7 @@ if (typeof importScripts !== 'undefined') {
   self.importScripts('context.js');
 }
 
-chrome.runtime.onMessage.addListener((request, sender) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.method === 'geo-requested') {
     chrome.action.setIcon({
       tabId: sender.tab.id,
@@ -31,7 +31,61 @@ chrome.runtime.onMessage.addListener((request, sender) => {
       title: 'Spoofing is bypassed. This website is in the exception list'
     });
   }
+  else if (request.method === 'focus-prompt') {
+    if (sender.tab) {
+      chrome.windows.update(sender.tab.windowId, {focused: true}).catch(() => {});
+    }
+  }
+  else if (request.method === 'open-prompt') {
+    openSerialized().then(sendResponse);
+    return true;
+  }
 });
+
+let promptChain = Promise.resolve();
+
+const ping = async () => {
+  try {
+    await chrome.runtime.sendMessage({method: 'ping-prompt'});
+    return true;
+  }
+  catch (e) {
+    return false;
+  }
+};
+
+const open = async () => {
+  if (await ping()) {
+    return {open: true};
+  }
+
+  try {
+    const win = await chrome.windows.getLastFocused();
+    const width = 560;
+    const height = 500;
+    await chrome.windows.create({
+      url: '/data/prompt/index.html',
+      width,
+      height,
+      left: win.left + Math.round((win.width - width) / 2),
+      top: win.top + Math.round((win.height - height) / 2),
+      type: 'popup'
+    });
+    // wait until the prompt page is listening so that concurrent
+    // requests see a ready window instead of creating a second one
+    for (let i = 0; i < 20 && (await ping()) === false; i++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  catch (e) {}
+
+  return {open: false};
+};
+
+const openSerialized = () => {
+  promptChain = promptChain.then(open, open);
+  return promptChain;
+};
 
 const activate = async () => {
   const prefs = await chrome.storage.local.get({

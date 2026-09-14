@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prompt :: Spoof Geolocation</title>
+  <link rel="stylesheet" type="text/css" href="index.css">
+</head>
+<body>
+  <p id="msg">Enter your spoofed "latitude" and "longitude" values as well as a custom name for the location.
+
+Ensure at least 5 digits follow the decimal point. Closing this window without a selection is considered an empty response.</p>
+  <div id="pending" hidden>
+    <b>Pending requests (<span id="count">0</span>)</b>
+    <div id="pending-list"></div>
+  </div>
+  <div id="list"></div>
+  <p id="empty">No stored locations yet. Add a new one below.</p>
+  <form id="add">
+    <input type="text" id="latitude" placeholder="Latitude (e.g. 51.507368)" required>
+    <input type="text" id="longitude" placeholder="Longitude (e.g. -0.127695)" required>
+    <input type="text" id="name" placeholder="Name (optional)">
+    <button type="submit">Add</button>
+  </form>
+  <p id="tools">
+    <label id="allow-blur" title="When unchecked (default), this window stays on top by refocusing itself on blur.
+When checked, the window can lose focus and behaves like a normal window.">
+      <input type="checkbox" id="blur">
+      Allow blur
+    </label>
+    <button id="deny" type="button" title="Cancel all pending requests and deny GEO access. Same as closing this window without a selection.">Cancel (Deny)</button>
+    <button id="sample" type="button" title="Insert a random valid sample geo into the form">Random Sample</button>
+    <button id="submit" disabled>Use Selected Location</button>
+  </p>
+  <script type="text/javascript" src="index.js"></script>
+</body>
+</html>
